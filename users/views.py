@@ -1,15 +1,15 @@
 from django.shortcuts import render
-
-# Create your views here.
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from rest_framework.response import Response
 from rest_framework import status, generics
-from rest_framework.permissions import AllowAny
-from django.contrib.auth.models import User
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.serializers import ModelSerializer
+from rest_framework.decorators import api_view, permission_classes
 
 # User Serializer
 class UserSerializer(ModelSerializer):
@@ -55,3 +55,9 @@ class LoginView(APIView):
             "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })
+
+# Dashboard API View (for JWT users)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  # Requires JWT authentication
+def dashboard(request):
+    return Response({"message": f"Welcome to your dashboard, {request.user.username}!"}, status=status.HTTP_200_OK)
