@@ -4,7 +4,43 @@ from workflows.utils import execute_node
 from workflows.models import Workflow, Node
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
+from rest_framework.test import APIClient
+from django.urls import reverse
+from rest_framework import status
 
+User = get_user_model()
+
+class WorkflowPermissionTests(TestCase):
+    def setUp(self):
+        # Create two users
+        self.user1 = User.objects.create_user(username='user1', password='password123')
+        self.user2 = User.objects.create_user(username='user2', password='password123')
+        
+        # Create a workflow owned by user1
+        self.workflow = Workflow.objects.create(name='Test Workflow', user=self.user1)
+        
+        self.client = APIClient()
+    
+    def test_user_can_access_own_workflow(self):
+        # Log in as user1
+        self.client.force_authenticate(user=self.user1)
+        
+        # Try to access user1's workflow
+        url = reverse('workflow-detail', args=[self.workflow.id])
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_user_cannot_access_others_workflow(self):
+        # Log in as user2
+        self.client.force_authenticate(user=self.user2)
+        
+        # Try to access user1's workflow
+        url = reverse('workflow-detail', args=[self.workflow.id])
+        response = self.client.get(url)
+        
+        # Should be 404 Not Found (not in queryset) or 403 Forbidden
+        self.assertIn(response.status_code, [status.HTTP_404_NOT_FOUND, status.HTTP_403_FORBIDDEN])
 User = get_user_model()
 
 class AdvancedExecuteNodeTests(TestCase):
@@ -68,6 +104,6 @@ class AdvancedExecuteNodeTests(TestCase):
             order=2
         )
         
-        result = run_workflow(self.workflow.id)
+        result = run_workflow(self.workflow.id, execution_id=1)
         self.assertEqual(result['completed_nodes'], 2)
         self.assertTrue(result['success'])

@@ -1,10 +1,11 @@
-from django.urls import path, include
+# users/urls.py
+from django.urls import path
 from .views import RegisterView, LoginView
+
+app_name = 'users'  # Set the application namespace
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
-    path('auth/', include('dj_rest_auth.urls')),
-    path('auth/registration/', include('dj_rest_auth.registration.urls')),
-    path('auth/social/', include('allauth.socialaccount.urls')),  # Only keep this line
+    # Add other user-specific endpoints as needed
 ]

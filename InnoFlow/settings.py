@@ -14,6 +14,13 @@ SECRET_KEY = 'django-insecure-_-$07##g=z3jcvi7-o)5zfh9^g&wg&59)00sz0-3v51@-4t6-d
 DEBUG = True
 ALLOWED_HOSTS = []
 
+SIGNUP_FIELDS = {
+    'username': {'required': True},
+    'email': {'required': True},
+}
+
+ACCOUNT_LOGIN_METHODS = {'username'}
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -54,14 +61,27 @@ from datetime import timedelta
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Keep session auth for browsable API if needed
+        'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'EXCEPTION_HANDLER': 'InnoFlow.exceptions.custom_exception_handler',
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Token expires in 1 hour
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Refresh token expires in 1 day
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
 }
-
 
 ROOT_URLCONF = 'InnoFlow.urls'
 
@@ -93,11 +113,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {

@@ -23,6 +23,17 @@ def run_workflow(self, workflow_id, execution_id):
 
         logger.info(f"Starting workflow {workflow_id} (execution {execution_id}) with {len(nodes)} nodes")
 
+        if execution.workflow_id != workflow_id:
+            logger.error(f"Permission denied: Execution {execution_id} does not belong to workflow {workflow_id}")
+            execution.status = 'failed'
+            execution.error_logs = "Permission error: Execution does not match workflow"
+            execution.save()
+            return {"error": "Permission denied"}
+        
+        execution.status = 'running'
+        execution.started_at = timezone.now()
+        execution.save()
+
         for node in nodes:
             try:
                 previous_output = results[-1] if results else None
