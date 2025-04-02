@@ -10,6 +10,14 @@ class NodeSerializer(serializers.ModelSerializer):
         model = Node
         fields = ['id', 'type', 'config', 'order']
     
+    def validate(self, data):
+        # Check if user has permission for the workflow
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            if data.get('workflow') and data['workflow'].user != request.user:
+                raise serializers.ValidationError("You don't have permission to modify this workflow")
+        return data
+
     def validate_workflow(self, value):
         if value.user != self.context['request'].user:
             raise serializers.ValidationError("You do not have permission to create nodes for this workflow.")
