@@ -8,7 +8,7 @@ class NodeSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Node
-        fields = ['id', 'type', 'config', 'order']
+        fields = ['id','workflow', 'type', 'config', 'order']
     
     def validate_workflow(self, value):
         if value.user != self.context['request'].user:
@@ -32,7 +32,7 @@ class WorkflowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workflow
-        fields = ['id', 'name', 'user', 'created_at', 'updated_at', 'nodes']
+        fields = ['id', 'name', 'user', 'created_at', 'updated_at', 'nodes','config']
 
 class WorkflowExecutionSerializer(serializers.ModelSerializer):
     class Meta:

@@ -13,6 +13,7 @@ from django.db.models import Q
 class WorkflowViewSet(viewsets.ModelViewSet):
     serializer_class = WorkflowSerializer
     permission_classes = [IsAuthenticated]
+    queryset = Workflow.objects.all()
 
     def get_queryset(self):
         return Workflow.objects.filter(user=self.request.user)
@@ -37,6 +38,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 class NodeViewSet(viewsets.ModelViewSet):
     serializer_class = NodeSerializer
     permission_classes = [IsAuthenticated]
+    queryset = Node.objects.all()
 
     def get_queryset(self):
         user_workflows = Workflow.objects.filter(user=self.request.user)
