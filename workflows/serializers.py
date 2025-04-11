@@ -28,6 +28,11 @@ class NodeSerializer(serializers.ModelSerializer):
         return value
 
 class WorkflowSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Workflow objects.
+    
+    Includes all workflow fields and nested nodes.
+    """
     nodes = NodeSerializer(many=True, read_only=True)  # Include nodes in workflow response
 
     class Meta:

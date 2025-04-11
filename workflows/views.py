@@ -11,19 +11,48 @@ from rest_framework.response import Response
 from django.db.models import Q
 
 class WorkflowViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing workflows.
+    
+    list:
+    Return a list of all workflows owned by the current user.
+    
+    create:
+    Create a new workflow.
+    
+    retrieve:
+    Return a specific workflow by ID.
+    
+    update:
+    Update a workflow.
+    
+    partial_update:
+    Partially update a workflow.
+    
+    destroy:
+    Delete a workflow.
+    """
     serializer_class = WorkflowSerializer
     permission_classes = [IsAuthenticated]
     queryset = Workflow.objects.all()
 
     def get_queryset(self):
+        """Return only workflows owned by the current user."""
         return Workflow.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        """Create a new workflow with the current user as owner."""
         serializer.save(user=self.request.user)
 
 
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):
+        """
+        Execute a workflow.
+        
+        Starts asynchronous execution of the specified workflow.
+        Returns the execution ID that can be used to track progress.
+        """
         workflow = self.get_object()
         execution = WorkflowExecution.objects.create(
             workflow=workflow,
