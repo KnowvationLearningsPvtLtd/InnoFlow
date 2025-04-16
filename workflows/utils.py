@@ -21,7 +21,7 @@ def execute_node(node, input_data, continue_on_error=False):
         result = None
         
         if node.type == "text_input":
-            result = input_data
+            result = node.config.get("default_text", input_data)
             
         elif node.type == "openai_tts":
             # Extract text from the dictionary
