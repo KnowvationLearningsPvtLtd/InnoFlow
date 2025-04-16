@@ -61,12 +61,14 @@ class AdvancedExecuteNodeTests(TestCase):
         Node.objects.create(
             workflow=self.workflow,
             type="text_input",
-            order=1
+            order=1,
+            config={"default_text": "Hello from test input"},
         )
         Node.objects.create(
             workflow=self.workflow,
             type="openai_tts",
-            order=2
+            order=2,
+            config={"default_text": "Hello world"}
         )
 
         # Create an execution object
