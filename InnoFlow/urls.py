@@ -48,6 +48,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/ai/', include('ai_integration.urls')),
     
     # Swagger URLs
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
@@ -72,6 +73,7 @@ urlpatterns = [
 
     # Optional: include the default socialaccount routes (e.g. for admin testing)
     path('api/auth/social/allauth/', include('allauth.socialaccount.urls')),
+   
 ]
 
 urlpatterns += swagger_urlpatterns
