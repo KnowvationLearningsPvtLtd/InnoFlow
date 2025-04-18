@@ -1,0 +1,13 @@
+
+*.log
+*.log.*
+
+/
+*.py[cod]
+
+
+.env
+venv/
+
+.vscode/
+.idea/
