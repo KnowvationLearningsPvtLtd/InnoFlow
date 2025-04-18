@@ -33,27 +33,35 @@ ALLOWED_HOSTS = []
 
 # Installed Apps
 INSTALLED_APPS = [
+    # Django core apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ai_integration',
-    'analytics',
-    'users',
-    'workflows',
+    'django.contrib.sites',  # Required for allauth
+
+    # Third-party apps
     'rest_framework',
     'rest_framework.authtoken',
-    'dj_rest_auth',
-    'django.contrib.sites',
+    'drf_yasg',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
+    'dj_rest_auth',
     'dj_rest_auth.registration',
-    'drf_yasg',
+    'rest_framework_simplejwt',
+
+    # Local apps
+    'ai_integration',
+    'analytics',
+    'users',
+    'workflows',
+    'auth' 
+    'auth.apps.AuthConfig',
 ]
 
 # Swagger settings
@@ -108,6 +116,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'InnoFlow.wsgi.application'
 
+# email verification
+from dotenv import load_dotenv
+load_dotenv()
+
+# Replace hardcoded DB settings with:
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'innodb'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+    }
+}
+AUTH_USER_MODEL = 'auth.CustomUser'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
