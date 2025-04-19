@@ -7,7 +7,8 @@ class UserProfile(AbstractUser):
     position = models.CharField(max_length=100, blank=True, null=True)
     company = models.CharField(max_length=100, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    # Add more fields as needed for extensibility
+
     def __str__(self):
         return self.username

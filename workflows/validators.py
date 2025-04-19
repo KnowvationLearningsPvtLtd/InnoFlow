@@ -1,5 +1,6 @@
-from typing import List, Dict
-from .models import Workflow, Node, WorkflowExecution
+# workflows/validators.py
+from typing import List
+from .models import Workflow, WorkflowExecution, Node
 
 class WorkflowValidator:
     @staticmethod
@@ -10,22 +11,6 @@ class WorkflowValidator:
         if not workflow.nodes.exists():
             errors.append("Workflow has no nodes")
             return errors
-
-        # Validate node connections
-        for node in workflow.nodes.all():
-            # Check required inputs
-            required_inputs = NodePort.objects.filter(
-                node=node,
-                is_input=True,
-                is_required=True
-            )
-            
-            for port in required_inputs:
-                if not NodeConnection.objects.filter(
-                    target_node=node,
-                    target_port=port.name
-                ).exists():
-                    errors.append(f"Required input '{port.name}' not connected for node {node.name}")
 
         # Validate execution order
         orders = list(workflow.nodes.values_list('order', flat=True))
@@ -38,14 +23,39 @@ class WorkflowValidator:
     def validate_execution(execution: WorkflowExecution) -> List[str]:
         errors = []
         
-        # Validate execution context
-        if not execution.execution_context:
-            errors.append("Execution context is required")
+        # Check if workflow exists
+        if not execution.workflow:
+            errors.append("Execution must be linked to a workflow")
+            return errors
+        
+        # Check if required config exists in workflow
+        required_config = execution.workflow.config.get('required_config', {})
+        execution_results = execution.results or {}
+        
+        # Check for missing required values in results
+        if required_config:
+            for key, config in required_config.items():
+                if config.get('required', False) and key not in execution_results:
+                    errors.append(f"Required result '{key}' is missing from execution results")
 
-        # Validate variables
-        required_vars = execution.workflow.config.get('required_variables', [])
-        for var in required_vars:
-            if var not in execution.variables:
-                errors.append(f"Required variable '{var}' not provided")
+        return errors
 
+class NodeValidator:
+    @staticmethod
+    def validate_node(node: Node) -> List[str]:
+        errors = []
+        
+        # Basic validation
+        if not node.type:
+            errors.append("Node must have a type")
+            
+        # Validate node config against its type requirements
+        try:
+            from workflows.node_types import NodeTypeRegistry
+            node_type = NodeTypeRegistry.get_node_type(node.type)
+            config_errors = node_type.validate_config(node.config or {})
+            errors.extend(config_errors)
+        except Exception as e:
+            errors.append(f"Error validating node type: {str(e)}")
+            
         return errors

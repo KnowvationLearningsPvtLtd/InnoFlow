@@ -23,14 +23,23 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from rest_framework import permissions
+from rest_framework import permissions, status
+from rest_framework.response import Response
 from .swagger import swagger_urlpatterns
 
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == "GET":
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().dispatch(request, *args, **kwargs)
 
 class GithubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == "GET":
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return super().dispatch(request, *args, **kwargs)
 
 # Schema view for Swagger
 schema_view = get_schema_view(
@@ -58,21 +67,22 @@ urlpatterns = [
     # JWT auth
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
+    # default socialaccount routes (e.g. for admin testing)
     # App APIs
     path('api/users/', include('users.urls')),
-    path('api/workflows/', include('workflows.urls')),
+    path('api/workflows/', include('workflows.urls')),    
+    path('api/ai/', include('ai_integration.urls')),
 
     # REST auth
     path('api/auth/', include('dj_rest_auth.urls')),
-    path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('api/auth/social/', include('allauth.socialaccount.urls')),
 
-    # Social auth endpoints
     path('api/auth/social/google/', GoogleLogin.as_view(), name='google_login'),
     path('api/auth/social/github/', GithubLogin.as_view(), name='github_login'),
 
-    # Optional: include the default socialaccount routes (e.g. for admin testing)
-    path('api/auth/social/allauth/', include('allauth.socialaccount.urls')),
+    path('accounts/', include('allauth.urls')),
+
 ]
 
+    
 urlpatterns += swagger_urlpatterns

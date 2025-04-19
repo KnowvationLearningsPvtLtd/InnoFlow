@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 from django.conf import settings
 from ..ai_providers import AIProvider
 
@@ -9,8 +9,8 @@ class OpenAIProvider(AIProvider):
 
     def generate_completion(self, prompt: str, **kwargs):
         try:
-            openai.api_key = self.api_key
-            response = openai.ChatCompletion.create(
+            client = OpenAI(api_key=self.api_key)
+            response = client.responses.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 **kwargs

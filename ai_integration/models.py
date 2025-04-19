@@ -63,3 +63,22 @@ class TaskStatus(models.Model):
 
     def __str__(self):
         return f"{self.task_id} - {self.status}"
+    
+# Add to ai_integration/models.py
+class NodePort(models.Model):
+    PORT_TYPES = [
+        ('input', 'Input'),
+        ('output', 'Output'),
+    ]
+    
+    node = models.ForeignKey('workflows.Node', on_delete=models.CASCADE, related_name='ports')
+    name = models.CharField(max_length=100)
+    port_type = models.CharField(max_length=10, choices=PORT_TYPES)
+    data_type = models.CharField(max_length=50, default='any')
+    optional = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ['node', 'name', 'port_type']
+        
+    def __str__(self):
+        return f"{self.node} - {self.port_type}:{self.name}"
