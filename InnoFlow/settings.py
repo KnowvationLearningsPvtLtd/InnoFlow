@@ -91,7 +91,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
-    'core.middleware.ErrorHandlingMiddleware',
 ]
 
 ROOT_URLCONF = 'InnoFlow.urls'
@@ -217,6 +216,13 @@ CELERY_TASK_ROUTES = {
     'workflows.tasks.run_workflow': {'queue': 'workflow'},
     'ai_integration.tasks.run_ai_model_task': {'queue': 'ai'},
 }
+
+# Frontend URL for password reset and email verification
+FRONTEND_URL = 'http://localhost:3000'  # Change this in production
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
+DEFAULT_FROM_EMAIL = 'noreply@innoflow.com'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
