@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'drf_yasg',
     'django_celery_results',
-    'django_prometheus',  # Add prometheus integration
 ]
 
 CELERY_RESULT_BACKEND = 'django-db'
@@ -91,11 +90,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',  # Add first
     'allauth.account.middleware.AccountMiddleware',
     'analytics.middleware.AnalyticsMiddleware',
-    'InnoFlow.middleware.ErrorHandlingMiddleware',
-    'django_prometheus.middleware.PrometheusAfterMiddleware',  # Add last
 ]
 
 ROOT_URLCONF = 'InnoFlow.urls'
@@ -170,25 +166,15 @@ AUTH_USER_MODEL = 'users.UserProfile'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-        }
-    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose'
         },
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.FileHandler',
             'filename': 'workflow_debug.log',
-            'maxBytes': 1_000_000,  # 1MB
-            'backupCount': 3,
-            'formatter': 'verbose',
-            'encoding': 'utf-8'
-        }
+        },
     },
     'loggers': {
         'workflows': {
@@ -196,18 +182,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'ai_integration': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'analytics': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        }
-    }
+    },
 }
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -224,6 +203,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# InnoFlow/settings.py
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Use Redis as the broker
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -255,6 +235,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
