@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, serializers, status
+from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticated
 from .models import Workflow, Node, WorkflowExecution
 from .serializers import WorkflowSerializer, NodeSerializer, WorkflowExecutionSerializer
@@ -32,10 +32,11 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             workflow=workflow,
             status='pending'
         )
+        run_workflow.delay(workflow.id, execution.id)
         return Response({
-            'status': 'Workflow execution started',
-            'execution_id': execution.id
-        }, status=status.HTTP_200_OK)
+            "status": "Workflow execution started",
+            "execution_id": execution.id
+        })
 
 class NodeViewSet(viewsets.ModelViewSet):
     serializer_class = NodeSerializer
@@ -53,7 +54,7 @@ class NodeViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 
-class WorkflowExecutionViewSet(viewsets.ModelViewSet):
+class WorkflowExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WorkflowExecution.objects.all()
     serializer_class = WorkflowExecutionSerializer
     permission_classes = [IsAuthenticated]
@@ -61,37 +62,3 @@ class WorkflowExecutionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user_workflows = Workflow.objects.filter(user=self.request.user)
         return self.queryset.filter(workflow__in=user_workflows)
-
-    @action(detail=True, methods=['post'])
-    def execute(self, request, pk=None):
-        workflow = self.get_object()
-        executor = WorkflowExecutor(workflow.id)
-        execution = executor.execute_workflow()
-        
-        # Create analytics entries
-        WorkflowAnalytics.objects.create(
-            workflow=workflow,
-            execution_time=timezone.now(),
-            status=execution.status
-        )
-        
-        UserActivityLog.objects.create(
-            user=request.user,
-            activity_type='workflow_execution',
-            details={
-                'workflow_id': workflow.id,
-                'execution_id': execution.id,
-                'status': execution.status
-            }
-        )
-        
-        return Response({
-            'execution_id': execution.id,
-            'status': execution.status
-        })
-
-    @action(detail=True, methods=['get'])
-    def performance(self, request, pk=None):
-        execution = self.get_object()
-        perf_data = get_execution_performance(execution.id)
-        return Response(perf_data)
