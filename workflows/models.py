@@ -40,9 +40,23 @@ class WorkflowExecution(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     results = models.JSONField(null=True, blank=True)
     error_logs = models.TextField(null=True, blank=True)
-    execution_context = models.JSONField(default=dict)  # Add this field
-    variables = models.JSONField(default=dict)  # Add this field
-    
+    execution_context = models.JSONField(default=dict)
+    variables = models.JSONField(default=dict)
+    execution_time = models.FloatField(null=True, blank=True)
+    start_time = models.DateTimeField(default=timezone.now)
+    end_time = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.end_time and self.start_time:
+            self.execution_time = (self.end_time - self.start_time).total_seconds()
+        super().save(*args, **kwargs)
+
+    def calculate_execution_time(self):
+        if self.end_time and self.start_time:
+            self.execution_time = (self.end_time - self.start_time).total_seconds()
+            self.save()
+
     def __str__(self):
         return f"Execution of {self.workflow.name} ({self.status.capitalize()})"
 

@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 
 class AIModelConfig(models.Model):
     MODEL_CHOICES = [
@@ -82,3 +83,26 @@ class NodePort(models.Model):
         
     def __str__(self):
         return f"{self.node} - {self.port_type}:{self.name}"
+
+class AIModel(models.Model):
+    name = models.CharField(max_length=200)
+    provider = models.CharField(max_length=100)
+    model_type = models.CharField(max_length=100)
+    config = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True)
+    
+    def to_dict(self):
+        cache_key = f"ai_model_{self.id}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+            
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'provider': self.provider,
+            'type': self.model_type,
+            'config': self.config
+        }
+        cache.set(cache_key, data, timeout=3600)
+        return data

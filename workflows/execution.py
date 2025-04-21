@@ -1,65 +1,89 @@
 from celery import shared_task
 from django.utils import timezone
-from .models import WorkflowExecution, Node, NodeConnection
-from workflows.utils import execute_node  # Import the execute_node function
-from typing import Any, Dict
+from workflows.models import Workflow, WorkflowExecution
+from analytics.models import WorkflowAnalytics
+from workflows.utils import execute_node
+import logging
+
+logger = logging.getLogger(__name__)
 
 class WorkflowExecutor:
-    def __init__(self, execution: WorkflowExecution):
-        self.execution = execution
-        self.context = {}
-        self.results = {}
+    def __init__(self, workflow_id):
+        """Initialize with just workflow_id, execution will be created/fetched as needed"""
+        self.workflow = Workflow.objects.get(id=workflow_id)
+        self.execution = None
 
-    def execute_node(self, node: Node, input_data: Any = None) -> Dict:
-        try:
-            # Get or set default retry values
-            if not hasattr(node, 'retry_count'):
-                node.retry_count = 0
-            if not hasattr(node, 'max_retries'):
-                node.max_retries = 3  # Default max retries
-                
-            result = execute_node(node, input_data, continue_on_error=False)
-            self.results[node.id] = result
-            return result
-        except Exception as e:
-            if node.retry_count < node.max_retries:
-                node.retry_count += 1
-                node.save()
-                return self.execute_node(node, input_data)
-            raise
+    def set_execution(self, execution_id=None):
+        """Set or create execution"""
+        if execution_id:
+            self.execution = WorkflowExecution.objects.get(id=execution_id)
+        else:
+            self.execution = WorkflowExecution.objects.create(
+                workflow=self.workflow,
+                status='pending'
+            )
+        return self.execution
 
     def execute_workflow(self):
+        """Execute the workflow"""
+        if not self.execution:
+            self.set_execution()
+
         try:
-            self.execution.status = 'running'
-            self.execution.started_at = timezone.now()
-            self.execution.save()
-
-            nodes = Node.objects.filter(
-                workflow=self.execution.workflow,
-                is_enabled=True
-            ).order_by('order')
-
+            nodes = self.workflow.nodes.all().order_by('order')
+            if not nodes.exists():
+                raise ValueError("No nodes in workflow")
+            
             for node in nodes:
-                input_data = self.get_node_input(node)
-                result = self.execute_node(node, input_data)
+                if not node.config:
+                    raise ValueError(f"Missing configuration for node {node.id}")
+                
+                # For AI completion nodes, verify model config
+                if node.type == 'ai_completion':
+                    if 'model_config_id' not in node.config:
+                        raise ValueError(f"Missing model_config_id for AI node {node.id}")
+            
+            input_data = None
+            
+            for node in nodes:
+                try:
+                    result = self.execute_node(node, input_data)
+                    input_data = result
+                except Exception as e:
+                    logger.error(f"Node execution failed: {str(e)}", exc_info=True)
+                    self.execution.status = 'failed'
+                    self.execution.error_message = str(e)
+                    self.execution.save()
+                    raise
 
             self.execution.status = 'completed'
-            self.execution.completed_at = timezone.now()
-            self.execution.results = self.results
-            self.execution.save()
-        except Exception as e:
-            self.execution.status = 'failed'
-            self.execution.error_logs = str(e)
-            self.execution.save()
-            raise
+            self.execution.results = input_data
 
-    def get_node_input(self, node: Node) -> Any:
-        input_connections = NodeConnection.objects.filter(
-            target_node=node,
-            target_port='input'
-        )
-        if not input_connections:
+        except Exception as e:
+            logger.error(f"Workflow execution failed: {str(e)}", exc_info=True)
+            self.execution.status = 'failed'
+            self.execution.error_message = str(e)
+            
+        finally:
+            self.execution.end_time = timezone.now()
+            self.execution.calculate_execution_time()
+            self.execution.save()
+            
+            # Create analytics entry
+            WorkflowAnalytics.objects.create(
+                workflow=self.workflow,
+                execution_time=timezone.now(),
+                status=self.execution.status
+            )
+            
+            return input_data
+
+    def execute_node(self, node, input_data):
+        """Execute a single node"""
+        try:
+            return execute_node(node, input_data)
+        except Exception as e:
+            logger.error(f"Node execution failed: {str(e)}", exc_info=True)
+            if not self.workflow.continue_on_error:
+                raise
             return None
-        source_connection = input_connections.first()
-        source_result = self.results.get(source_connection.source_node_id)
-        return source_result

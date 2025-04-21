@@ -17,6 +17,11 @@ import datetime
 
 load_dotenv()
 
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="dj_rest_auth.registration.serializers")
+warnings.filterwarnings("ignore", category=UserWarning, module="allauth.account.adapter")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,6 +61,8 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'drf_yasg',
     'django_celery_results',
+    'django_prometheus',  # Add prometheus integration
+    'corsheaders',
 ]
 
 CELERY_RESULT_BACKEND = 'django-db'
@@ -85,13 +92,17 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',  # Add first
     'allauth.account.middleware.AccountMiddleware',
-    'core.middleware.ErrorHandlingMiddleware',
+    'analytics.middleware.AnalyticsMiddleware',
+    'InnoFlow.middleware.ErrorHandlingMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',  # Add last
 ]
 
 ROOT_URLCONF = 'InnoFlow.urls'
@@ -166,15 +177,25 @@ AUTH_USER_MODEL = 'users.UserProfile'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
+        }
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
         },
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': 'workflow_debug.log',
-        },
+            'maxBytes': 1_000_000,  # 1MB
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'encoding': 'utf-8'
+        }
     },
     'loggers': {
         'workflows': {
@@ -182,11 +203,18 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-    },
+        'ai_integration': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'analytics': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
+    }
 }
-
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -203,7 +231,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# InnoFlow/settings.py
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Use Redis as the broker
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -218,6 +245,13 @@ CELERY_TASK_ROUTES = {
     'ai_integration.tasks.run_ai_model_task': {'queue': 'ai'},
 }
 
+# Frontend URL for password reset and email verification
+FRONTEND_URL = 'http://localhost:3000'  # Change this in production
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
+DEFAULT_FROM_EMAIL = 'noreply@innoflow.com'
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -228,7 +262,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -267,3 +300,37 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# Cross-app Integration Settings
+WORKFLOW_AI_INTEGRATION = {
+    'MAX_CONCURRENT_EXECUTIONS': 5,
+    'EXECUTION_TIMEOUT': 300,  # 5 minutes
+    'ENABLE_RESULT_CACHING': True,
+    'CACHE_TIMEOUT': 3600,  # 1 hour
+}
+
+# Role-based Access Control
+RBAC_ROLES = {
+    'admin': ['*'],
+    'workflow_creator': ['workflow.create', 'workflow.execute', 'workflow.view'],
+    'viewer': ['workflow.view']
+}
+
+# Analytics Configuration
+ANALYTICS_CONFIG = {
+    'TRACK_WORKFLOW_EXECUTION': True,
+    'TRACK_AI_MODEL_USAGE': True,
+    'PERFORMANCE_MONITORING': True
+}
+
+# Cross-app Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    },
+    'workflow_results': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/2',
+    }
+}

@@ -8,7 +8,11 @@ import io
 from PIL import Image
 from django.contrib.sites.models import Site
 from allauth.socialaccount.models import SocialApp
-
+from django.core import mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+ 
 User = get_user_model()
 
 def create_test_image():
@@ -138,4 +142,88 @@ class OAuthEndpointTests(APITestCase):
             url,
             format='json'
         )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='resetuser', email='reset@example.com', password='resetpass123'
+        )
+
+    def test_password_reset_request_valid_email(self):
+        url = reverse('password-reset')
+        response = self.client.post(url, {'email': 'reset@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Reset your password', mail.outbox[0].subject)
+
+    def test_password_reset_request_invalid_email(self):
+        url = reverse('password-reset')
+        response = self.client.post(url, {'email': 'notfound@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_reset_confirm_valid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        url = reverse('password-reset-confirm')
+        data = {
+            'uid': uid,
+            'token': token,
+            'new_password': 'newpass123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpass123'))
+
+    def test_password_reset_confirm_invalid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        url = reverse('password-reset-confirm')
+        data = {
+            'uid': uid,
+            'token': 'invalid-token',
+            'new_password': 'newpass123'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class EmailVerificationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='verifyuser', email='verify@example.com', password='verifypass123', is_active=False
+        )
+
+    def test_email_verification_request_valid_email(self):
+        url = reverse('email-verify')
+        response = self.client.post(url, {'email': 'verify@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Verify your email', mail.outbox[0].subject)
+
+    def test_email_verification_request_invalid_email(self):
+        url = reverse('email-verify')
+        response = self.client.post(url, {'email': 'notfound@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_email_verification_confirm_valid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        url = reverse('email-verify-confirm')
+        data = {
+            'uid': uid,
+            'token': token
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_active)
+
+    def test_email_verification_confirm_invalid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        url = reverse('email-verify-confirm')
+        data = {
+            'uid': uid,
+            'token': 'invalid-token'
+        }
+        response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
