@@ -9,42 +9,55 @@ logger = logging.getLogger(__name__)
 summarizer_pipeline = pipeline("summarization", model="facebook/bart-large-cnn")
 
 def execute_node(node: Node, input_data, continue_on_error=False):
-    """
-    Execute a node with enhanced error handling and logging
-    """
+    """Execute a node with enhanced error handling and logging"""
     try:
-        # Handle None input
-        if input_data is None:
-            input_data = ""  # Default to empty string
-
         logger.info(f"Executing Node {node.id} ({node.type}) with input: {str(input_data)[:50]}...")
 
-        result = None
+        # Extract text from input data
+        text = None
+        if isinstance(input_data, dict):
+            text = (input_data.get('result') or 
+                   input_data.get('input') or 
+                   input_data.get('text'))
+            # Handle variables
+            variables = input_data.get('variables', {})
+            if variables and node.type == 'text_input':
+                config_text = node.config.get('text', '')
+                for var_name, value in variables.items():
+                    var_placeholder = f'${{{var_name}}}'
+                    if var_placeholder in config_text:
+                        return value
+        else:
+            text = str(input_data) if input_data is not None else None
 
         if node.type == "text_input":
-            result = node.config.get("default_text") or node.config.get("text") or input_data
+            result = node.config.get('text', text or '')
+
+        elif node.type == "huggingface_summarization":
+            if not text:
+                text = node.config.get('text') or (
+                    input_data if isinstance(input_data, str) else None
+                )
+            if not text:
+                raise ValueError("Summarization input must be a string")
+            
+            # Handle short inputs
+            max_length = min(130, len(text.split()) + 10)
+            summary = summarizer_pipeline(text, max_length=max_length, min_length=10)
+            result = summary[0].get("summary_text", "")
 
         elif node.type == "openai_tts":
-            # Extract text from the dictionary
-            if isinstance(input_data, dict):
-                input_data = input_data.get("result", "")  # Extract text safely
-
-            if not isinstance(input_data, str) or not input_data.strip():
-                raise ValueError("Invalid input for TTS: Expected a non-empty string.")
-            # Simulate TTS with error simulation
-            if "simulate_failure" in node.config:
-                raise ConnectionError("Simulated API connection failure")
-
-            tts = gTTS(text=input_data, lang='en')
+            if not text:
+                text = node.config.get('text', '')
+            
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("Invalid input for TTS: Expected a non-empty string")
+            
+            tts = gTTS(text=text, lang=node.config.get('voice', 'en'))
             audio_file = io.BytesIO()
-
             tts.write_to_fp(audio_file)
             audio_file.seek(0)
             result = "TTS audio generated successfully"
-
-        elif node.type == "huggingface_summarization":
-            summary = summarizer_pipeline(input_data)
-            result = summary[0].get("summary_text", "No summary found")
 
         else:
             raise ValueError(f"Unknown node type: {node.type}")
@@ -55,5 +68,5 @@ def execute_node(node: Node, input_data, continue_on_error=False):
     except Exception as e:
         logger.error(f"Error in Node {node.id}: {str(e)}", exc_info=True)
         if not continue_on_error:
-            raise  # Propagate error to stop workflow
+            raise
         return f"ERROR: {str(e)}"

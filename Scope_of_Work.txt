@@ -43,8 +43,7 @@ Project Overview
  Implement a marketplace for pre-built AI workflow templates.
  Provide an in-app documentation and tutorial system.
 
-Technology Stack:
-
+Technology Stack
  Frontend: React.js, Tailwind CSS
  Backend: Flask / Django / FastAPI
  Database: PostgreSQL / MongoDB / SQLite
@@ -54,24 +53,3 @@ Technology Stack:
 
 
 
-No need for these features: 
-
-1. Workflow Version Control:
-No snapshot system for workflow versions
-Missing diff comparison functionality
-No rollback mechanism
-
-2. AI Model Caching:
-No caching system for frequently used AI models
-Missing model warm-up functionality
-No result caching for identical inputs
-
-3. Real-time Collaboration:
-No WebSocket implementation for real-time updates
-Missing conflict resolution system
-No shared workspace functionality
-
-4. Security:
-Missing rate limiting for AI operations
-No API key rotation mechanism
-Missing input sanitization for AI prompts

@@ -72,6 +72,7 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/workflows/', include('workflows.urls')),    
     path('api/ai/', include('ai_integration.urls')),
+    path('api/analytics/', include('analytics.urls', namespace='analytics')),
 
     # REST auth
     path('api/auth/', include('dj_rest_auth.urls')),
@@ -81,7 +82,6 @@ urlpatterns = [
     path('api/auth/social/github/', GithubLogin.as_view(), name='github_login'),
 
     path('accounts/', include('allauth.urls')),
-
 ]
 
     
