@@ -133,7 +133,7 @@ class TextInputNode(NodeType):
     icon = "text"
     
     config_params = [
-        ConfigParam("default_text", "string", "", False, "Default text value")
+        ConfigParam("text", "string", "", False, "Default text value")
     ]
     
     ports = [
