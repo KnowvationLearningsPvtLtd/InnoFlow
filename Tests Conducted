@@ -1,0 +1,27 @@
+# Tests Conducted
+
+## Users App
+
+*   Unit tests for the user model, covering string representation and email validation.
+*   Integration tests cover user registration, login, profile updates, password reset, and email verification flows.
+*   A full user flow integration test combines all these features.
+
+## Workflows App
+
+*   Unit tests for workflow, node, workflow execution, and node connection models, as well as serializer tests for each model.
+*   View tests cover listing, detail, and creation for workflows, nodes, and workflow executions.
+*   Task tests cover running workflows.
+*   Util tests cover node execution.
+*   Additional tests validate workflow rules, execution context handling, node type validation, and workflow permission boundaries.
+*   Integration tests cover complete workflow execution, error handling, workflows with variables, and retry mechanisms.
+
+## AI Integration App
+
+*   Unit tests for providers (Claude, DeepSeek, HuggingFace, Ollama, OpenAI), serializers (AIModelConfig, ModelResponse), and models (AIModelConfig, ModelComparison, ModelResponse, TaskStatus).
+*   Integration tests cover model config listing, model comparison and task flow, compare models action, task status view, and workflow port integration.
+
+## Analytics App
+
+*   API tests for workflow performance, system performance, usage statistics, workflow execution stats, node performance stats, user activity report, system performance report, workflow performance chart, and monthly report endpoints.
+*   Service tests cover workflow execution stats, user activity report, and system performance report services.
+*   Middleware tests cover analytics record creation.
