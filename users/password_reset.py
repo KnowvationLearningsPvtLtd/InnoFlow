@@ -23,6 +23,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True)
 
+    class Meta:
+        ref_name = "CustomPasswordResetConfirm"  # Add this line
+        
     def validate(self, attrs):
         try:
             uid = force_str(urlsafe_base64_decode(attrs['uid']))
